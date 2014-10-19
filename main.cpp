@@ -234,6 +234,12 @@ match_whatever(const char(&fmt)[N], const std::size_t n) {
         true; // No more characters, and no more args.
 }
 
+constexpr
+static
+bool warn_extra_arg() {
+    return false;
+}
+
 template<std::size_t N, class T, typename... Args>
 constexpr
 static
@@ -245,7 +251,7 @@ match_whatever(const char(&fmt)[N], const std::size_t n, const T& arg, const Arg
                 match_whatever(fmt, n + 2, arg, args...): // Found '%%' - start again.
                 match_flags(fmt, n + 1, none, arg, args...): // Try to match flags.
             match_whatever(fmt, n + 1, arg, args...):     // Common character - start again.
-        false; // No more characters, but args left => extra arguments.
+        warn_extra_arg(); // No more characters, but args left => extra arguments.
 }
 
 template<std::size_t N, typename... Args>
@@ -256,6 +262,8 @@ check_syntax(const char(&fmt)[N], const Args&... args) {
     return match_whatever(fmt, 0, args...);
 }
 
+static_assert(!check_syntax("", 42),                "fail | incomplete | extra arg");
+static_assert(!check_syntax("incomplete", 42),      "fail | incomplete | extra arg");
 static_assert(!check_syntax("%"),                   "fail | incomplete | single");
 static_assert(!check_syntax("%", 42),               "fail | incomplete | single");
 static_assert(!check_syntax("%d %", 42),            "fail | digit | single | incomplete");
@@ -318,8 +326,8 @@ static_assert( check_syntax("% d", 42),             "pass | digit | signle | spa
 static_assert( check_syntax("%  d", 42),            "pass | digit | signle | space flag duplicated");
 static_assert( check_syntax("%#x", 42),             "pass | digit | signle | sharp flag");
 static_assert( check_syntax("%##x", 42),            "pass | digit | signle | sharp flag duplicated");
-//    static_assert(!check_syntax("%#d", 42),             "fail | digit | signle | sharp flag");
-//    static_assert(!check_syntax("%##d", 42),            "fail | digit | signle | sharp flag duplicated");
+//static_assert(!check_syntax("%#d", 42),             "fail | digit | signle | sharp flag");
+//static_assert(!check_syntax("%##d", 42),            "fail | digit | signle | sharp flag duplicated");
 static_assert( check_syntax("%0d", 42),             "pass | digit | signle | zero flag");
 static_assert( check_syntax("%00d", 42),            "pass | digit | signle | zero flag duplicated");
 
