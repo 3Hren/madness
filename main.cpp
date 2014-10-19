@@ -6,17 +6,6 @@
 #endif
 
 int main(int, char**) {
-//    printf("%ld\n", 42L);   //ok
-//    printf("%ld\n", 42);    //fail
-//    printf("%li\n", 42L);   //ok
-//    printf("%li\n", 42);    //fail
-//    printf("%lo\n", 42);    //fail
-//    printf("%lo\n", 42UL);  //ok
-//    printf("%lu\n", 42);    //fail
-//    printf("%lu\n", 42UL);  //ok
-//    printf("%lx\n", 42);    //fail
-//    printf("%lx\n", 42UL);  //ok
-//    printf("%lX\n", 42);    //fail
 //    printf("%lX\n", 42UL);  //ok
     return 0;
 }
@@ -65,6 +54,11 @@ template<class> struct supported {
 };
 
 template<>
+struct supported<char> : public supported_base<supported<char>, char> {
+    constexpr static char expected[sizeof("c")] = { "c" };
+};
+
+template<>
 struct supported<int> {
     template<std::size_t N, class... Args>
     constexpr
@@ -81,11 +75,6 @@ struct supported<int> {
                     false:
             false; // No more characters left, but there is arguments.
     }
-};
-
-template<>
-struct supported<char> : public supported_base<supported<char>, char> {
-    constexpr static char expected[sizeof("c")] = { "c" };
 };
 
 template<>
@@ -441,9 +430,3 @@ static_assert( check_syntax("%lx", 42UL),           "pass | long uint | single")
 static_assert(!check_syntax("%lx", 42),             "fail | long uint | single | type mismatch");
 static_assert( check_syntax("%lX", 42UL),           "pass | long uint | single");
 static_assert(!check_syntax("%lX", 42),             "fail | long uint | single | type mismatch");
-//printf("%lu\n", 42);    //fail
-//printf("%lu\n", 42UL);  //ok
-//printf("%lx\n", 42);    //fail
-//printf("%lx\n", 42UL);  //ok
-//printf("%lX\n", 42);    //fail
-//printf("%lX\n", 42UL);  //ok
