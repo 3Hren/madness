@@ -6,6 +6,18 @@
 #endif
 
 int main(int, char**) {
+//    printf("%ld\n", 42L);   //ok
+//    printf("%ld\n", 42);    //fail
+//    printf("%li\n", 42L);   //ok
+//    printf("%li\n", 42);    //fail
+//    printf("%lo\n", 42);    //fail
+//    printf("%lo\n", 42UL);  //ok
+//    printf("%lu\n", 42);    //fail
+//    printf("%lu\n", 42UL);  //ok
+//    printf("%lx\n", 42);    //fail
+//    printf("%lx\n", 42UL);  //ok
+//    printf("%lX\n", 42);    //fail
+//    printf("%lX\n", 42UL);  //ok
     return 0;
 }
 
@@ -82,8 +94,41 @@ struct supported<unsigned> : public supported_base<supported<unsigned>, unsigned
 };
 
 template<>
-struct supported<long> : public supported_base<supported<long>, long> {
-    constexpr static char expected[sizeof("ld")] = { "ld" };
+struct supported<long> {
+    template<std::size_t N, class... Args>
+    constexpr
+    static
+    bool
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's'?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                n + 1 < N && (fmt[n] == 'l' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i'))?
+                    match_whatever(fmt, n + 1, args...):
+                    false:
+            false; // No more characters left, but there is arguments.
+    }
+};
+
+template<>
+struct supported<unsigned long> {
+    template<std::size_t N, class... Args>
+    constexpr
+    static
+    bool
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's'?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                n + 1 < N && (fmt[n] == 'l' && (fmt[n + 1] == 'u' || fmt[n + 1] == 'o' || fmt[n + 1] == 'x' ||  fmt[n + 1] == 'X'))?
+                    match_whatever(fmt, n + 1, args...):
+                    false:
+            false; // No more characters left, but there is arguments.
+    }
 };
 
 template<>
@@ -295,9 +340,6 @@ static_assert( check_syntax("%d", 42),              "pass | digit | single");
 static_assert(!check_syntax("%d"),                  "fail | digit | single | unsufficient args");
 static_assert(!check_syntax("%d", 42, 10),          "fail | digit | single | extra arg");
 
-static_assert( check_syntax("%ld", 42L),            "pass | long digit | single");
-static_assert(!check_syntax("%ld", 42),             "fail | long digit | single | type mismatch");
-
 static_assert( check_syntax(">%d", 42),             "pass | digit | single | prefix");
 static_assert( check_syntax("%d>", 42),             "pass | digit | single | suffix");
 static_assert( check_syntax(">%d>", 42),            "pass | digit | single | prefix suffix");
@@ -385,3 +427,23 @@ static_assert( check_syntax("%s", s),               "pass | string | single");
 static_assert( check_syntax("%s", 42),              "pass | string | single | convertible via <<");
 static_assert( check_syntax("%s", 3.14),            "pass | string | single | convertible via <<");
 #endif
+
+static_assert( check_syntax("%ld", 42L),            "pass | long int | single");
+static_assert(!check_syntax("%ld", 42),             "fail | long int | single | type mismatch");
+static_assert( check_syntax("%li", 42L),            "pass | long int | single");
+static_assert(!check_syntax("%li", 42),             "fail | long int | single | type mismatch");
+
+static_assert( check_syntax("%lo", 42UL),           "pass | long uint | single");
+static_assert(!check_syntax("%lo", 42),             "fail | long uint | single | type mismatch");
+static_assert( check_syntax("%lu", 42UL),           "pass | long uint | single");
+static_assert(!check_syntax("%lu", 42),             "fail | long uint | single | type mismatch");
+static_assert( check_syntax("%lx", 42UL),           "pass | long uint | single");
+static_assert(!check_syntax("%lx", 42),             "fail | long uint | single | type mismatch");
+static_assert( check_syntax("%lX", 42UL),           "pass | long uint | single");
+static_assert(!check_syntax("%lX", 42),             "fail | long uint | single | type mismatch");
+//printf("%lu\n", 42);    //fail
+//printf("%lu\n", 42UL);  //ok
+//printf("%lx\n", 42);    //fail
+//printf("%lx\n", 42UL);  //ok
+//printf("%lX\n", 42);    //fail
+//printf("%lX\n", 42UL);  //ok
