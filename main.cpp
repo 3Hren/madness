@@ -6,7 +6,7 @@
 #endif
 
 int main(int, char**) {
-//    printf("%hd\n", (short)42);  //ok
+    printf("%d\n", (short)42);  //ok
     return 0;
 }
 
@@ -94,7 +94,7 @@ struct supported<short> {
             fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
-                n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i'))?
+                (fmt[n] == 'd') || (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i')))?
                     match_whatever(fmt, n + 1, args...):
                     false:
             false; // No more characters left, but there is arguments.
@@ -454,6 +454,8 @@ static_assert( check_syntax("%s", s),               "pass | string | single");
 static_assert( check_syntax("%s", 42),              "pass | string | single | convertible via <<");
 static_assert( check_syntax("%s", 3.14),            "pass | string | single | convertible via <<");
 #endif
+
+static_assert( check_syntax("%d", (short)42),       "pass | short int | single");
 
 static_assert( check_syntax("%ld", 42L),            "pass | long int | single");
 static_assert(!check_syntax("%ld", 42),             "fail | long int | single | type mismatch");
