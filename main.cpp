@@ -53,10 +53,6 @@ struct supported_base {
 
 template<>
 struct supported<int> {
-    constexpr static char expected[sizeof("d")] = { "d" };
-
-    typedef supported<int> R;
-
     template<std::size_t N, class T, class... Args>
     constexpr
     static
@@ -75,6 +71,11 @@ struct supported<int> {
 };
 
 template<>
+struct supported<char> : public supported_base<supported<char>> {
+    constexpr static char expected[sizeof("c")] = { "c" };
+};
+
+template<>
 struct supported<unsigned> : public supported_base<supported<unsigned>> {
     constexpr static char expected[sizeof("u")] = { "u" };
 };
@@ -85,8 +86,23 @@ struct supported<long> : public supported_base<supported<long>> {
 };
 
 template<>
-struct supported<double> : public supported_base<supported<double>> {
-    constexpr static char expected[sizeof("f")] = { "f" };
+struct supported<double> {
+    template<std::size_t N, class T, class... Args>
+    constexpr
+    static
+    bool
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const T&, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's' && blackhole::traits::supports::stream_push<T>::value?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                (fmt[n] == 'f' || fmt[n] == 'F' || fmt[n] == 'e' || fmt[n] == 'E' ||
+                 fmt[n] == 'g' || fmt[n] == 'G' || fmt[n] == 'a' || fmt[n] == 'A')?
+                    match_whatever(fmt, n + 1, args...):
+                    false:
+            false; // No more characters left, but there is arguments.
+    }
 };
 
 template<std::size_t N>
@@ -350,7 +366,15 @@ static_assert( check_syntax("%X", 42),              "pass | Hex | single");
 static_assert( check_syntax("%u", 42u),             "pass | unsigned int | single");
 
 static_assert( check_syntax("%f", 3.14),            "pass | float | single");
+static_assert( check_syntax("%F", 3.14),            "pass | float uppercase | single");
+static_assert( check_syntax("%e", 3.14),            "pass | scientific | single");
+static_assert( check_syntax("%E", 3.14),            "pass | scientific uppercase | single");
+static_assert( check_syntax("%g", 3.14),            "pass | float shortest | single");
+static_assert( check_syntax("%G", 3.14),            "pass | float shortest uppercase | single");
+static_assert( check_syntax("%a", 3.14),            "pass | float hex | single");
+static_assert( check_syntax("%A", 3.14),            "pass | float hex uppercase | single");
 
+static_assert( check_syntax("%c", '5'),             "pass | char | single");
 static_assert( check_syntax("%s", "lit"),           "pass | literal | single");
 
 std::string s("str");
