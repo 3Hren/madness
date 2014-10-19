@@ -6,7 +6,7 @@
 #endif
 
 int main(int, char**) {
-    printf("%d\n", (short)42);  //ok
+    printf("%i\n", (unsigned short)42);  //ok
     return 0;
 }
 
@@ -94,7 +94,7 @@ struct supported<short> {
             fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
-                (fmt[n] == 'd') || (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i')))?
+                (fmt[n] == 'd' || fmt[n] == 'i') || (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i')))?
                     match_whatever(fmt, n + 1, args...):
                     false:
             false; // No more characters left, but there is arguments.
@@ -113,7 +113,8 @@ struct supported<unsigned short> {
             fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
-                n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'u' || fmt[n + 1] == 'o' || fmt[n + 1] == 'x' || fmt[n + 1] == 'X'))?
+                (fmt[n] == 'd' || fmt[n] == 'i') ||
+                (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'u' || fmt[n + 1] == 'o' || fmt[n + 1] == 'x' || fmt[n + 1] == 'X')))?
                     match_whatever(fmt, n + 1, args...):
                     false:
             false; // No more characters left, but there is arguments.
@@ -456,6 +457,9 @@ static_assert( check_syntax("%s", 3.14),            "pass | string | single | co
 #endif
 
 static_assert( check_syntax("%d", (short)42),       "pass | short int | single");
+static_assert( check_syntax("%i", (short)42),       "pass | short int | single");
+static_assert( check_syntax("%d", (unsigned short)42),      "pass | short int | single");
+static_assert( check_syntax("%i", (unsigned short)42),      "pass | short int | single");
 
 static_assert( check_syntax("%ld", 42L),            "pass | long int | single");
 static_assert(!check_syntax("%ld", 42),             "fail | long int | single | type mismatch");
