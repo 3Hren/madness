@@ -21,46 +21,47 @@ static
 bool
 match_whatever(const char(&fmt)[N], const std::size_t n, const T& arg, const Args&... args);
 
-template<class> struct supported {
-    template<std::size_t N, class T, class... Args>
+template<class Base, class T>
+struct supported_base {
+    template<std::size_t N, class... Args>
     constexpr
     static
     bool
-    match_type(const char(&)[N], const std::size_t, std::size_t, const T&, const Args&...) {
-        return false; // Unregistered.
+    match_type(const char(&fmt)[N], std::size_t n, size_t e, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's' && blackhole::traits::supports::stream_push<T>::value?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                e < sizeof(Base::expected) - 1?
+                    fmt[n] == Base::expected[e] && match_type(fmt, n + 1, e + 1, args...):
+                    n < N ?
+                        match_whatever(fmt, n, args...):  // Some format characters left, but there is no more characters of type to be matched.
+                        false: // No more characters left, but there is arguments.
+            false;
     }
 };
 
-template<class R>
-struct supported_base {
-    template<std::size_t N, class T, class... Args>
+template<class> struct supported {
+    template<std::size_t N, class... Args>
     constexpr
     static
     bool
-    match_type(const char(&fmt)[N], std::size_t n, size_t e, const T& arg, const Args&... args) {
-        return
-#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
-            n < N && fmt[n] == 's' && blackhole::traits::supports::stream_push<T>::value?
-                match_whatever(fmt, n + 1, args...):
-#endif
-            e < sizeof(R::expected) - 1 && n < N ?
-                fmt[n] == R::expected[e] && match_type(fmt, n + 1, e + 1, arg, args...):
-                n < N ?
-                    match_whatever(fmt, n, args...):  // Some format characters left, but there is no more characters of type to be matched.
-                    false; // No more characters left, but there is arguments.
+    match_type(const char(&)[N], const std::size_t, std::size_t, const Args&...) {
+        return false; // Unregistered.
     }
 };
 
 template<>
 struct supported<int> {
-    template<std::size_t N, class T, class... Args>
+    template<std::size_t N, class... Args>
     constexpr
     static
     bool
-    match_type(const char(&fmt)[N], std::size_t n, size_t, const T&, const Args&... args) {
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
         return n < N?
 #ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
-            fmt[n] == 's' && blackhole::traits::supports::stream_push<T>::value?
+            fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
                 (fmt[n] == 'd' || fmt[n] == 'i' || fmt[n] == 'o' || fmt[n] == 'x' || fmt[n] == 'X')?
@@ -71,30 +72,30 @@ struct supported<int> {
 };
 
 template<>
-struct supported<char> : public supported_base<supported<char>> {
+struct supported<char> : public supported_base<supported<char>, char> {
     constexpr static char expected[sizeof("c")] = { "c" };
 };
 
 template<>
-struct supported<unsigned> : public supported_base<supported<unsigned>> {
+struct supported<unsigned> : public supported_base<supported<unsigned>, unsigned> {
     constexpr static char expected[sizeof("u")] = { "u" };
 };
 
 template<>
-struct supported<long> : public supported_base<supported<long>> {
+struct supported<long> : public supported_base<supported<long>, long> {
     constexpr static char expected[sizeof("ld")] = { "ld" };
 };
 
 template<>
 struct supported<double> {
-    template<std::size_t N, class T, class... Args>
+    template<std::size_t N, class... Args>
     constexpr
     static
     bool
-    match_type(const char(&fmt)[N], std::size_t n, size_t, const T&, const Args&... args) {
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
         return n < N?
 #ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
-            fmt[n] == 's' && blackhole::traits::supports::stream_push<T>::value?
+            fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
                 (fmt[n] == 'f' || fmt[n] == 'F' || fmt[n] == 'e' || fmt[n] == 'E' ||
@@ -106,13 +107,13 @@ struct supported<double> {
 };
 
 template<std::size_t N>
-struct supported<char[N]> : public supported_base<supported<char[N]>> {
+struct supported<char[N]> : public supported_base<supported<char[N]>, char[N]> {
     constexpr static char expected[sizeof("s")] = { "s" };
 };
 
 template<class Char, class Traits, class Allocator>
 struct supported<std::basic_string<Char, Traits, Allocator>> :
-    public supported_base<supported<std::basic_string<Char, Traits, Allocator>>>
+    public supported_base<supported<std::basic_string<Char, Traits, Allocator>>, std::basic_string<Char, Traits, Allocator>>
 {
     constexpr static char expected[2] = { "s" };
 };
@@ -129,8 +130,8 @@ template<std::size_t N, class T, typename... Args>
 constexpr
 static
 bool
-match_type(const char(&fmt)[N], const std::size_t n, const T& arg, const Args&... args) {
-    return supported<T>::match_type(fmt, n, 0, arg, args...);
+match_type(const char(&fmt)[N], const std::size_t n, const T&, const Args&... args) {
+    return supported<T>::match_type(fmt, n, 0, args...);
 }
 
 template<std::size_t N, class T, typename... Args>
