@@ -6,7 +6,7 @@
 #endif
 
 int main(int, char**) {
-//    printf("%lX\n", 42UL);  //ok
+//    printf("%hd\n", (short)42);  //ok
     return 0;
 }
 
@@ -80,6 +80,44 @@ struct supported<int> {
 template<>
 struct supported<unsigned> : public supported_base<supported<unsigned>, unsigned> {
     constexpr static char expected[sizeof("u")] = { "u" };
+};
+
+template<>
+struct supported<short> {
+    template<std::size_t N, class... Args>
+    constexpr
+    static
+    bool
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's'?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i'))?
+                    match_whatever(fmt, n + 1, args...):
+                    false:
+            false; // No more characters left, but there is arguments.
+    }
+};
+
+template<>
+struct supported<unsigned short> {
+    template<std::size_t N, class... Args>
+    constexpr
+    static
+    bool
+    match_type(const char(&fmt)[N], std::size_t n, size_t, const Args&... args) {
+        return n < N?
+#ifdef BLACKHOLE_HAS_STATIC_PRINTF_OPERATOR_PUSH_SUPPORT
+            fmt[n] == 's'?
+                match_whatever(fmt, n + 1, args...):
+#endif
+                n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'u' || fmt[n + 1] == 'o' || fmt[n + 1] == 'x' || fmt[n + 1] == 'X'))?
+                    match_whatever(fmt, n + 1, args...):
+                    false:
+            false; // No more characters left, but there is arguments.
+    }
 };
 
 template<>
@@ -430,3 +468,17 @@ static_assert( check_syntax("%lx", 42UL),           "pass | long uint | single")
 static_assert(!check_syntax("%lx", 42),             "fail | long uint | single | type mismatch");
 static_assert( check_syntax("%lX", 42UL),           "pass | long uint | single");
 static_assert(!check_syntax("%lX", 42),             "fail | long uint | single | type mismatch");
+
+static_assert( check_syntax("%hd", (short)42),      "pass | short int | single");
+static_assert(!check_syntax("%hd", 42),             "fail | short int | single | type mismatch");
+static_assert( check_syntax("%hi", (short)42),      "pass | short int | single");
+static_assert(!check_syntax("%hi", 42),             "fail | short int | single | type mismatch");
+
+static_assert( check_syntax("%hu", (unsigned short)42),     "pass | ushort int | single");
+static_assert(!check_syntax("%hu", 42),                     "fail | ushort int | single | type mismatch");
+static_assert( check_syntax("%ho", (unsigned short)42),     "pass | ushort int | single");
+static_assert(!check_syntax("%ho", 42),                     "fail | ushort int | single | type mismatch");
+static_assert( check_syntax("%hx", (unsigned short)42),     "pass | ushort int | single");
+static_assert(!check_syntax("%hx", 42),                     "fail | ushort int | single | type mismatch");
+static_assert( check_syntax("%hX", (unsigned short)42),     "pass | ushort int | single");
+static_assert(!check_syntax("%hX", 42),                     "fail | ushort int | single | type mismatch");
