@@ -6,7 +6,7 @@
 #endif
 
 int main(int, char**) {
-    printf("%i\n", (unsigned short)42);  //ok
+    printf("%X\n", static_cast<unsigned short>(42));  //ok
     return 0;
 }
 
@@ -94,7 +94,9 @@ struct supported<short> {
             fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
-                (fmt[n] == 'd' || fmt[n] == 'i') || (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i')))?
+                // Match: [diuoxX] | h[di].
+                (fmt[n] == 'd' || fmt[n] == 'i' || fmt[n] == 'u' || fmt[n] == 'o' || fmt[n] == 'x' || fmt[n] == 'X') ||
+                (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'd' || fmt[n + 1] == 'i')))?
                     match_whatever(fmt, n + 1, args...):
                     false:
             false; // No more characters left, but there is arguments.
@@ -113,7 +115,8 @@ struct supported<unsigned short> {
             fmt[n] == 's'?
                 match_whatever(fmt, n + 1, args...):
 #endif
-                (fmt[n] == 'd' || fmt[n] == 'i') ||
+                // Match: [diuoxX] | h[uoxX].
+                (fmt[n] == 'd' || fmt[n] == 'i' || fmt[n] == 'u' || fmt[n] == 'o' || fmt[n] == 'x' || fmt[n] == 'X') ||
                 (n + 1 < N && (fmt[n] == 'h' && (fmt[n + 1] == 'u' || fmt[n + 1] == 'o' || fmt[n + 1] == 'x' || fmt[n + 1] == 'X')))?
                     match_whatever(fmt, n + 1, args...):
                     false:
@@ -178,6 +181,9 @@ struct supported<double> {
             false; // No more characters left, but there is arguments.
     }
 };
+
+template<>
+struct supported<float> : public supported<double> {};
 
 template<std::size_t N>
 struct supported<char[N]> : public supported_base<supported<char[N]>, char[N]> {
@@ -445,6 +451,8 @@ static_assert( check_syntax("%G", 3.14),            "pass | float shortest upper
 static_assert( check_syntax("%a", 3.14),            "pass | float hex | single");
 static_assert( check_syntax("%A", 3.14),            "pass | float hex uppercase | single");
 
+static_assert( check_syntax("%f", static_cast<float>(3.14)),    "pass | float | single");
+
 static_assert( check_syntax("%c", '5'),             "pass | char | single");
 static_assert( check_syntax("%s", "lit"),           "pass | literal | single");
 
@@ -458,8 +466,17 @@ static_assert( check_syntax("%s", 3.14),            "pass | string | single | co
 
 static_assert( check_syntax("%d", (short)42),       "pass | short int | single");
 static_assert( check_syntax("%i", (short)42),       "pass | short int | single");
-static_assert( check_syntax("%d", (unsigned short)42),      "pass | short int | single");
-static_assert( check_syntax("%i", (unsigned short)42),      "pass | short int | single");
+static_assert( check_syntax("%u", (short)42),       "pass | short int | single");
+static_assert( check_syntax("%o", (short)42),       "pass | short int | single");
+static_assert( check_syntax("%x", (short)42),       "pass | short int | single");
+static_assert( check_syntax("%X", (short)42),       "pass | short int | single");
+
+static_assert( check_syntax("%d", (unsigned short)42),      "pass | ushort int | single");
+static_assert( check_syntax("%i", (unsigned short)42),      "pass | ushort int | single");
+static_assert( check_syntax("%u", (unsigned short)42),      "pass | ushort int | single");
+static_assert( check_syntax("%o", (unsigned short)42),      "pass | ushort int | single");
+static_assert( check_syntax("%x", (unsigned short)42),      "pass | ushort int | single");
+static_assert( check_syntax("%X", (unsigned short)42),      "pass | ushort int | single");
 
 static_assert( check_syntax("%ld", 42L),            "pass | long int | single");
 static_assert(!check_syntax("%ld", 42),             "fail | long int | single | type mismatch");
