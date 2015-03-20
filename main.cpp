@@ -6,7 +6,16 @@
 #endif
 
 int main(int, char**) {
-    printf("%X\n", static_cast<unsigned short>(42));  //ok
+    printf("%hhd\n", static_cast<char>(42));  //k
+    printf("%hhd\n", static_cast<short>(42));  //f
+    printf("%hhd\n", 42);  //f
+    printf("%hhd\n", static_cast<unsigned char>(200));  //k
+    printf("%hhd\n", static_cast<unsigned short>(42));  //f
+    printf("%hhd\n", 42u);  //f
+
+    printf("%hhi\n", static_cast<char>(42));  //k
+    printf("%hhi\n", static_cast<short>(42));  //f
+    printf("%hhi\n", 42);  //f
     return 0;
 }
 
